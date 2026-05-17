@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0a1a10">
+<title>Nutrion · Remisiones</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0a1a10;--bg2:#0f2b1e;--bg3:#142e1f;--card:#152b1c;--accent:#2fe87a;--accent2:#1bc45e;--text:#e8f5ec;--muted:#7aad8a;--border:rgba(47,232,122,0.15);--border2:rgba(47,232,122,0.28);--danger:#ff6b6b;--warn:#ffd166}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;display:flex;flex-direction:column}
+header{height:54px;background:var(--bg2);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 1.1rem;flex-shrink:0;z-index:20}
+.logo{font-family:'Syne',sans-serif;font-weight:800;font-size:1.15rem;color:var(--accent);letter-spacing:-.02em}
+.logo span{color:var(--text);opacity:.55;font-weight:600;font-size:.78rem;margin-left:6px}
+.tab-bar{height:52px;background:var(--bg2);border-bottom:1px solid var(--border);display:flex;flex-shrink:0;z-index:10}
+.tab-btn{flex:1;display:flex;align-items:center;justify-content:center;gap:6px;font-family:'DM Sans',sans-serif;font-size:.82rem;font-weight:500;color:var(--muted);border:none;background:none;cursor:pointer;border-bottom:2.5px solid transparent;transition:color .15s,border-color .15s}
+.tab-btn.active{color:var(--accent);border-bottom-color:var(--accent)}
+.page{flex:1;overflow-y:auto;overflow-x:hidden;display:none;padding:1.1rem;flex-direction:column;gap:.9rem}
+.page.active{display:flex}
+.upload-zone{border:1.5px dashed var(--border2);border-radius:16px;background:var(--card);padding:1.8rem 1rem;display:flex;flex-direction:column;align-items:center;gap:.85rem;cursor:pointer;transition:border-color .2s,background .2s;position:relative;overflow:hidden;text-align:center}
+.upload-zone.drag{border-color:var(--accent);background:rgba(47,232,122,.06)}
+.upload-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.upload-icon{width:52px;height:52px;background:rgba(47,232,122,.1);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.5rem}
+.upload-zone h2{font-family:'Syne',sans-serif;font-size:.95rem;font-weight:700}
+.upload-zone p{font-size:.76rem;color:var(--muted);line-height:1.5}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:5px;padding:.6rem .9rem;border-radius:9px;border:1px solid var(--border2);background:var(--bg3);color:var(--text);font-family:'DM Sans',sans-serif;font-size:.82rem;font-weight:500;cursor:pointer;transition:background .12s}
+.btn:active{background:rgba(47,232,122,.09)}
+.btn.accent{background:var(--accent);color:#071208;border-color:var(--accent);font-weight:700}
+.btn.accent:active{background:var(--accent2)}
+.btn.danger{background:rgba(255,107,107,.1);border-color:rgba(255,107,107,.3);color:var(--danger)}
+.btn.sm{padding:.4rem .7rem;font-size:.75rem;border-radius:7px}
+#preview-wrap{display:none;flex-direction:column;gap:7px}
+#preview-wrap.show{display:flex}
+#preview-img{width:100%;border-radius:11px;border:1px solid var(--border);max-height:200px;object-fit:cover}
+.img-row{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.img-name{font-size:.72rem;color:var(--muted);font-family:'DM Mono',monospace;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#processing{display:none;align-items:center;gap:10px;padding:.9rem 1rem;background:var(--card);border-radius:11px;border:1px solid var(--border)}
+#processing.show{display:flex}
+.spinner{width:18px;height:18px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;flex-shrink:0}
+@keyframes spin{to{transform:rotate(360deg)}}
+#proc-text{font-size:.82rem;color:var(--muted)}
+#result-wrap{display:none;flex-direction:column;gap:9px}
+#result-wrap.show{display:flex}
+.result-header{display:flex;align-items:center;justify-content:space-between;padding:.65rem .9rem;background:rgba(47,232,122,.07);border-radius:10px 10px 0 0;border:1px solid rgba(47,232,122,.22);border-bottom:none}
+.result-header h3{font-family:'Syne',sans-serif;font-size:.85rem;font-weight:700;color:var(--accent)}
+.row-count{font-family:'DM Mono',monospace;font-size:.7rem;color:var(--muted)}
+#tsv-output{width:100%;background:#060e08;border:1px solid rgba(47,232,122,.22);border-top:none;border-radius:0 0 10px 10px;color:var(--accent);font-family:'DM Mono',monospace;font-size:.68rem;padding:.8rem .9rem;resize:vertical;min-height:120px;line-height:1.7;overflow-x:auto;white-space:pre}
+.action-row{display:flex;gap:7px}
+.btn-copy{flex:1;padding:.7rem;background:var(--accent);color:#071208;font-family:'Syne',sans-serif;font-weight:700;font-size:.88rem;border:none;border-radius:10px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;transition:background .15s}
+.btn-copy:active,.btn-copy.copied{background:var(--accent2)}
+.btn-new{padding:.7rem .95rem;background:var(--bg3);color:var(--muted);font-family:'DM Sans',sans-serif;font-size:.82rem;border:1px solid var(--border);border-radius:10px;cursor:pointer}
+#warnings{display:none;flex-direction:column;gap:5px}
+#warnings.show{display:flex}
+.warn-item{background:rgba(255,209,102,.07);border:1px solid rgba(255,209,102,.22);border-radius:8px;padding:.55rem .8rem;font-size:.74rem;color:var(--warn);font-family:'DM Mono',monospace}
+#error-box{display:none;background:rgba(255,107,107,.07);border:1px solid rgba(255,107,107,.28);border-radius:10px;padding:.9rem}
+#error-box.show{display:block}
+#error-box p{color:var(--danger);font-size:.8rem}
+.preview-table-wrap{overflow-x:auto;border-radius:10px;border:1px solid var(--border)}
+table.preview{width:100%;border-collapse:collapse;font-size:.68rem;font-family:'DM Mono',monospace}
+table.preview th{background:var(--bg3);color:var(--muted);padding:5px 7px;text-align:left;border-bottom:1px solid var(--border);white-space:nowrap}
+table.preview td{padding:4px 7px;border-bottom:1px solid rgba(255,255,255,.04);color:var(--text);white-space:nowrap}
+table.preview tr:last-child td{border-bottom:none}
+table.preview tr:hover td{background:rgba(47,232,122,.04)}
+.master-toolbar{display:flex;gap:7px;align-items:center;flex-wrap:wrap}
+.search-box{flex:1;min-width:100px;background:var(--bg3);border:1px solid var(--border2);border-radius:9px;padding:.5rem .75rem;color:var(--text);font-family:'DM Sans',sans-serif;font-size:.82rem;outline:none}
+.search-box::placeholder{color:var(--muted)}
+.master-count{font-size:.7rem;color:var(--muted);font-family:'DM Mono',monospace;white-space:nowrap}
+.master-table-wrap{overflow-x:auto;border-radius:11px;border:1px solid var(--border);flex:1;min-height:0}
+table.master{width:100%;border-collapse:collapse;font-size:.71rem;font-family:'DM Mono',monospace;min-width:460px}
+table.master thead th{background:var(--bg3);color:var(--muted);padding:6px 8px;text-align:left;border-bottom:1px solid var(--border);white-space:nowrap}
+table.master tbody td{padding:5px 8px;border-bottom:1px solid rgba(255,255,255,.04);color:var(--text);vertical-align:middle}
+table.master tbody tr:last-child td{border-bottom:none}
+table.master tbody tr:hover td{background:rgba(47,232,122,.04)}
+.td-actions{display:flex;gap:4px}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.72);display:none;align-items:flex-end;justify-content:center;z-index:100}
+.modal-overlay.open{display:flex}
+.modal{background:var(--bg2);border-radius:18px 18px 0 0;padding:1.3rem 1.1rem 2.2rem;width:100%;max-width:480px;border-top:1px solid var(--border2)}
+.modal h3{font-family:'Syne',sans-serif;font-weight:700;font-size:1rem;margin-bottom:1rem;color:var(--accent)}
+.field{display:flex;flex-direction:column;gap:4px;margin-bottom:.7rem}
+.field label{font-size:.7rem;color:var(--muted);font-family:'DM Mono',monospace}
+.field input{background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:.55rem .75rem;color:var(--text);font-family:'DM Mono',monospace;font-size:.82rem;outline:none;width:100%}
+.field input:focus{border-color:var(--accent)}
+.modal-actions{display:flex;gap:8px;margin-top:1rem}
+.notice{background:rgba(47,232,122,.06);border:1px solid var(--border);border-radius:9px;padding:.6rem .85rem;font-size:.73rem;color:var(--muted);display:flex;align-items:flex-start;gap:6px;line-height:1.5}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">NUTRION <span>· Remisiones TSV</span></div>
+</header>
+
+<div class="tab-bar">
+  <button class="tab-btn active" onclick="switchTab('remisiones',this)">
+    <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 16l4-4 4 4 4-8 4 4"/></svg>
+    Remisiones
+  </button>
+  <button class="tab-btn" onclick="switchTab('maestra',this)">
+    <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18"/></svg>
+    Tabla Maestra
+  </button>
+</div>
+
+<!-- PESTAÑA REMISIONES -->
+<div class="page active" id="page-remisiones">
+  <div class="upload-zone" id="drop-zone">
+    <input type="file" id="file-input" accept="image/*">
+    <div class="upload-icon">📄</div>
+    <h2>Sube o toma foto de la remisión</h2>
+    <p>Toca para elegir imagen · JPG, PNG, WEBP</p>
+  </div>
+  <div id="preview-wrap">
+    <img id="preview-img" src="" alt="Remisión">
+    <div class="img-row">
+      <span class="img-name" id="img-name"></span>
+      <button class="btn sm" onclick="processImage()">✨ Reprocesar</button>
+    </div>
+  </div>
+  <div id="processing"><div class="spinner"></div><span id="proc-text">Analizando…</span></div>
+  <div id="warnings"></div>
+  <div id="error-box"><p id="error-msg"></p></div>
+  <div id="result-wrap">
+    <div class="result-header">
+      <h3>TSV listo para Excel</h3>
+      <span class="row-count" id="row-count"></span>
+    </div>
+    <textarea id="tsv-output" readonly></textarea>
+    <div class="preview-table-wrap" id="table-wrap" style="display:none"></div>
+    <div class="action-row">
+      <button class="btn-copy" id="copy-btn" onclick="copyTSV()">📋 Copiar TSV</button>
+      <button class="btn-new" onclick="resetAll()">↩ Nueva</button>
+    </div>
+  </div>
+</div>
+
+<!-- PESTAÑA TABLA MAESTRA -->
+<div class="page" id="page-maestra">
+  <div class="notice">💡 Los cambios se guardan en este dispositivo y la IA los usa automáticamente en cada consulta.</div>
+  <div class="master-toolbar">
+    <input class="search-box" type="text" id="master-search" placeholder="Buscar producto…" oninput="renderMaster()">
+    <span class="master-count" id="master-count"></span>
+    <button class="btn accent sm" onclick="openModal()">＋ Agregar</button>
+    <button class="btn sm" onclick="resetMaster()">↺ Restaurar</button>
+  </div>
+  <div class="master-table-wrap">
+    <table class="master">
+      <thead><tr><th>Producto</th><th>Presentación</th><th>UdM</th><th>Precio</th><th></th></tr></thead>
+      <tbody id="master-body"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modal-overlay" onclick="closeModalOutside(event)">
+  <div class="modal">
+    <h3 id="modal-title">Agregar producto</h3>
+    <div class="field"><label>Nombre oficial del producto</label><input id="f-producto" placeholder="NUTRION ADULTOS x 1kg"></div>
+    <div class="field"><label>Presentación</label><input id="f-prest" placeholder="BOLSA X 1 Kg"></div>
+    <div class="field"><label>Unidad de Medida</label><input id="f-udm" placeholder="1Kg"></div>
+    <div class="field"><label>Precio Final (solo números, sin $ ni puntos)</label><input id="f-precio" type="number" placeholder="5600"></div>
+    <div class="modal-actions">
+      <button class="btn accent" style="flex:1" onclick="saveModal()">Guardar</button>
+      <button class="btn" onclick="closeModal()">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const DEFAULT_PRODUCTOS=[
+  {producto:"NUTRION ADULTOS x 500 Grs",prest:"BOLSA X 500 Grs",udm:"0.5Kg",precio:2900},
+  {producto:"NUTRION ADULTOS x 1kg",prest:"BOLSA X 1 Kg",udm:"1Kg",precio:5600},
+  {producto:"NUTRION ADULTOS x 2kg",prest:"BOLSA X 2 Kg",udm:"2Kg",precio:11200},
+  {producto:"NUTRION ADULTOS x 3Kg",prest:"BOLSA X 3 Kg",udm:"3Kg",precio:16600},
+  {producto:"NUTRION ADULTOS x 4Kg",prest:"BOLSA X 4 Kg",udm:"4Kg",precio:22000},
+  {producto:"NUTRION ADULTOS x 8 Kg",prest:"BULTO X 8 Kg",udm:"8Kg",precio:44000},
+  {producto:"NUTRION ADULTOS x 15kg",prest:"BULTO X 15 Kg",udm:"15Kg",precio:79900},
+  {producto:"NUTRION ADULTOS x 30Kg",prest:"BULTO X 30 Kg",udm:"30Kg",precio:156800},
+  {producto:"NUTRO x 30Kg",prest:"BULTO X 30 Kg",udm:"30Kg",precio:133000},
+  {producto:"RAZAS PEQUEÑAS Y MEDIANA x 500 Grs",prest:"BOLSA X 500 Grs",udm:"0.5Kg",precio:3200},
+  {producto:"RAZAS PEQUEÑAS Y MEDIANA x 2Kg",prest:"BOLSA X 2 Kg",udm:"2Kg",precio:12000},
+  {producto:"NUTRION CACHORROS x 0.5 Kg",prest:"BOLSA X 500 Gm",udm:"0.5Kg",precio:3100},
+  {producto:"NUTRION CACHORROS x 2Kg",prest:"BOLSA X 2 Kg",udm:"2Kg",precio:12300},
+  {producto:"NUTRION CACHORROS x 10Kg",prest:"BULTO X 10 Kg",udm:"10Kg",precio:59700},
+  {producto:"NUTRION SENIOR x 3 Kgs",prest:"BOLSA X 3 Kg",udm:"3Kg",precio:17800},
+  {producto:"NUTRION SENIOR x 10Kg",prest:"BULTO X 10 Kg",udm:"10Kg",precio:57400},
+  {producto:"NUTRION GALLETAS X 100g",prest:"BOLSA DE 100 Gm",udm:"0.1Kg",precio:2800},
+  {producto:"NUTRION GALLETAS CON ALGAS MARINAS x 0.1Kg",prest:"BOLSA DE 100 Gr",udm:"0.1Kg",precio:3200},
+  {producto:"NUTRION GALLETAS x 0.2Kg",prest:"BOLSA DE 200 Gm",udm:"0.2Kg",precio:5300},
+  {producto:"NUTRION GALLETAS x 0.6Kg",prest:"BOLSA DE 600 Gm",udm:"0.6Kg",precio:11900},
+  {producto:"NUTRION GALLETAS CON ALGAS MARINAS x 0.6Kg",prest:"BOLSA DE 600 Gm",udm:"0.6Kg",precio:13700},
+  {producto:"NU-TROCITOS PERRO SNACK x 50 Grs",prest:"BOLSA DE 50 Grs",udm:"0.05Kg",precio:1800},
+  {producto:"NU-TROCITOS",prest:"BOLSA DE 200 Gm",udm:"0.2Kg",precio:5900},
+  {producto:"SNACKS GATOS",prest:"BOLSA DE 150 Gm",udm:"0.15Kg",precio:9000},
+  {producto:"NUTRION GATOS x 0.5Kg",prest:"BOLSA X 500 Gm",udm:"0.5Kg",precio:4200},
+  {producto:"NUTRION GATOS x 1.5Kg",prest:"BOLSA X 1.5 Kg",udm:"1.5Kg",precio:11400},
+  {producto:"NUTRION GATOS x 8Kg",prest:"BULTO X 8 Kg",udm:"8Kg",precio:59000},
+  {producto:"NUTRION GATOS x 17Kg",prest:"BULTO X 17 Kg",udm:"17Kg",precio:118300},
+  {producto:"NUTRION GATOS ZEN x 0.5Kg",prest:"BOLSA X 500 Gm",udm:"0.5Kg",precio:4300},
+  {producto:"NUTRION GATOS ZEN x 1Kg",prest:"BOLSA X 1 Kg",udm:"1Kg",precio:8400},
+  {producto:"NUTRION GATOS ZEN x 3Kg",prest:"BOLSA X 3 Kg",udm:"3Kg",precio:24200},
+  {producto:"NUTRION GATOS ZEN 7.5 Kg",prest:"BULTO X 7.5 Kg",udm:"7.5Kg",precio:59200},
+  {producto:"NUTRION PATROL x 0.3 Kg",prest:"BOLSA X 300 Gm",udm:"0.3Kg",precio:6700},
+  {producto:"NUTRION ELITE x 2 Kg",prest:"BULTO X 2 Kg",udm:"2Kg",precio:16600},
+  {producto:"NUTRION ELITE x 8Kg",prest:"BULTO X 8 Kg",udm:"8Kg",precio:60200},
+  {producto:"NUTRION ELITE x 22.7Kg",prest:"BULTO X 22.7 Kg",udm:"22.7Kg",precio:162600},
+  {producto:"ARENA DE CAFÉ x 5Kg",prest:"bolsa x 5 kg",udm:"5Kg",precio:14200},
+  {producto:"ARENA DE LAVANDA x 5Kg",prest:"bolsa x 5 kg",udm:"5Kg",precio:14200},
+  {producto:"ARENA DE TALCO x 5Kg",prest:"bolsa x 5 kg",udm:"5Kg",precio:14200},
+  {producto:"ARENA DE MANZANA x 5Kg",prest:"bolsa x 5 kg",udm:"5Kg",precio:14200},
+  {producto:"ARENA DE CARBON x 5Kg",prest:"bolsa x 5 kg",udm:"5Kg",precio:15600},
+  {producto:"ARENA DE CAFÉ x 10Kg",prest:"bolsa x 10 kg",udm:"10Kg",precio:27000},
+  {producto:"ARENA DE LAVANDA x 10Kg",prest:"bolsa x 10 kg",udm:"10Kg",precio:27000},
+  {producto:"ARENA DE TALCO x 10Kg",prest:"bolsa x 10 kg",udm:"10Kg",precio:27000},
+  {producto:"ARENA DE CAFÉ x 25Kg",prest:"bulto x 25 kg",udm:"25Kg",precio:66600},
+  {producto:"ARENA DE LAVANDA x 25Kg",prest:"bulto x 25 kg",udm:"25Kg",precio:66600},
+  {producto:"ARENA DE MANZANA x 25Kg",prest:"bolsa x 25 kg",udm:"25Kg",precio:66600}
+];
+
+const SK='nutrion_productos_v1';
+function loadP(){try{const s=localStorage.getItem(SK);return s?JSON.parse(s):JSON.parse(JSON.stringify(DEFAULT_PRODUCTOS))}catch{return JSON.parse(JSON.stringify(DEFAULT_PRODUCTOS))}}
+function saveP(a){try{localStorage.setItem(SK,JSON.stringify(a))}catch{}}
+let productos=loadP();
+
+function escH(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+
+function renderMaster(){
+  const q=document.getElementById('master-search').value.toLowerCase();
+  const filtered=q?productos.filter(p=>p.producto.toLowerCase().includes(q)||p.prest.toLowerCase().includes(q)):productos;
+  document.getElementById('master-count').textContent=`${filtered.length} / ${productos.length}`;
+  document.getElementById('master-body').innerHTML=filtered.map(p=>{
+    const i=productos.indexOf(p);
+    return`<tr>
+      <td style="max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escH(p.producto)}">${escH(p.producto)}</td>
+      <td style="white-space:nowrap">${escH(p.prest)}</td>
+      <td>${escH(p.udm)}</td>
+      <td style="white-space:nowrap">$${Number(p.precio).toLocaleString('es-CO')}</td>
+      <td><div class="td-actions">
+        <button class="btn sm" onclick="openModal(${i})">✏️</button>
+        <button class="btn sm danger" onclick="deleteRow(${i})">🗑</button>
+      </div></td>
+    </tr>`;
+  }).join('');
+}
+
+function deleteRow(i){
+  if(!confirm(`¿Eliminar "${productos[i].producto}"?`))return;
+  productos.splice(i,1);saveP(productos);renderMaster();
+}
+function resetMaster(){
+  if(!confirm('¿Restaurar tabla original? Se perderán tus cambios.'))return;
+  productos=JSON.parse(JSON.stringify(DEFAULT_PRODUCTOS));saveP(productos);renderMaster();
+}
+
+let editIdx=-1;
+function openModal(i=-1){
+  editIdx=i;
+  document.getElementById('modal-title').textContent=i>=0?'Editar producto':'Agregar producto';
+  const p=i>=0?productos[i]:{producto:'',prest:'',udm:'',precio:''};
+  document.getElementById('f-producto').value=p.producto;
+  document.getElementById('f-prest').value=p.prest;
+  document.getElementById('f-udm').value=p.udm;
+  document.getElementById('f-precio').value=p.precio;
+  document.getElementById('modal-overlay').classList.add('open');
+  setTimeout(()=>document.getElementById('f-producto').focus(),60);
+}
+function closeModal(){document.getElementById('modal-overlay').classList.remove('open')}
+function closeModalOutside(e){if(e.target===document.getElementById('modal-overlay'))closeModal()}
+function saveModal(){
+  const producto=document.getElementById('f-producto').value.trim();
+  const prest=document.getElementById('f-prest').value.trim();
+  const udm=document.getElementById('f-udm').value.trim();
+  const precio=parseFloat(document.getElementById('f-precio').value);
+  if(!producto||!precio){alert('Nombre y precio son obligatorios.');return;}
+  const obj={producto,prest,udm,precio};
+  if(editIdx>=0)productos[editIdx]=obj;else productos.push(obj);
+  saveP(productos);renderMaster();closeModal();
+}
+
+function switchTab(tab,el){
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('page-'+tab).classList.add('active');
+  if(tab==='maestra')renderMaster();
+}
+
+function buildSystemPrompt(){
+  const lista=productos.map(p=>`${p.producto} = $${p.precio} (${p.udm})`).join('\n');
+  return`Eres un asistente especializado en extraer datos de remisiones de venta de productos para mascotas (marca Nutrion) y convertirlos a formato TSV para Excel.
+
+TABLA DE PRECIOS OFICIAL:
+${lista}
+
+REGLAS DE MAPEO (abreviaturas en tickets):
+- "PERROS" → "NUTRION ADULTOS"
+- "GATOS" → "NUTRION GATOS"
+- "CACHORROS" → "NUTRION CACHORROS"
+- "SENIOR" → "NUTRION SENIOR"
+- "ZEN" → "NUTRION GATOS ZEN"
+- "NU-TROCITOS X 50 GR" → "NU-TROCITOS PERRO SNACK x 50 Grs"
+
+FORMATO DE SALIDA: Responde ÚNICAMENTE con JSON (sin markdown, sin backticks):
+{"remision":"número","fecha":"D-mmm-YY en español (ej: 25-abr-26)","filas":[{"descripcion":"nombre oficial","out":cantidad}],"advertencias":["⚠ No reconocido: X"]}
+
+REGLAS:
+1. Número de remisión = campo REM, Folio o similar.
+2. Fecha sin hora, mes abreviado en español (ene,feb,mar,abr,may,jun,jul,ago,sep,oct,nov,dic).
+3. CANT del ticket → out (entero).
+4. Valida precio unitario contra tabla para confirmar presentación.
+5. Producto no identificado → advertencias, NO inventar.
+6. Solo JSON, nada más.`;
+}
+
+let currentFile=null,currentBase64=null;
+const fileInput=document.getElementById('file-input');
+const dropZone=document.getElementById('drop-zone');
+const previewWrap=document.getElementById('preview-wrap');
+const previewImg=document.getElementById('preview-img');
+const imgName=document.getElementById('img-name');
+const processing=document.getElementById('processing');
+const procText=document.getElementById('proc-text');
+const resultWrap=document.getElementById('result-wrap');
+const tsvOutput=document.getElementById('tsv-output');
+const rowCount=document.getElementById('row-count');
+const warningsDiv=document.getElementById('warnings');
+const errorBox=document.getElementById('error-box');
+const errorMsg=document.getElementById('error-msg');
+const tableWrap=document.getElementById('table-wrap');
+
+fileInput.addEventListener('change',e=>{if(e.target.files[0])loadFile(e.target.files[0])});
+dropZone.addEventListener('dragover',e=>{e.preventDefault();dropZone.classList.add('drag')});
+dropZone.addEventListener('dragleave',()=>dropZone.classList.remove('drag'));
+dropZone.addEventListener('drop',e=>{
+  e.preventDefault();dropZone.classList.remove('drag');
+  const f=e.dataTransfer.files[0];if(f&&f.type.startsWith('image/'))loadFile(f);
+});
+
+function loadFile(file){
+  currentFile=file;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    previewImg.src=e.target.result;
+    currentBase64=e.target.result.split(',')[1];
+    imgName.textContent=file.name;
+    previewWrap.classList.add('show');
+    dropZone.style.display='none';
+    hideAll();processImage();
+  };
+  reader.readAsDataURL(file);
+}
+
+function hideAll(){
+  processing.classList.remove('show');resultWrap.classList.remove('show');
+  warningsDiv.classList.remove('show');errorBox.classList.remove('show');
+  tableWrap.style.display='none';
+}
+
+const PROC_MSGS=['Analizando remisión con IA…','Identificando productos…','Validando precios oficiales…','Generando TSV…'];
+let procInterval;
+function startProcAnim(){
+  let i=0;procText.textContent=PROC_MSGS[0];
+  procInterval=setInterval(()=>{i=(i+1)%PROC_MSGS.length;procText.textContent=PROC_MSGS[i];},1800);
+}
+
+async function processImage(){
+  if(!currentBase64)return;
+  hideAll();processing.classList.add('show');startProcAnim();
+  try{
+    const mt=currentFile.type||'image/jpeg';
+    const resp=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-20250514',max_tokens:1000,
+        system:buildSystemPrompt(),
+        messages:[{role:'user',content:[
+          {type:'image',source:{type:'base64',media_type:mt,data:currentBase64}},
+          {type:'text',text:'Extrae los datos de esta remisión y devuelve el JSON.'}
+        ]}]
+      })
+    });
+    clearInterval(procInterval);processing.classList.remove('show');
+    if(!resp.ok){const e=await resp.json().catch(()=>({}));throw new Error(e.error?.message||`Error HTTP ${resp.status}`);}
+    const data=await resp.json();
+    const raw=data.content.map(b=>b.text||'').join('');
+    const clean=raw.replace(/```json|```/g,'').trim();
+    renderResult(JSON.parse(clean));
+  }catch(err){
+    clearInterval(procInterval);processing.classList.remove('show');
+    errorMsg.textContent='⚠ '+(err.message||'Error inesperado. Intenta de nuevo.');
+    errorBox.classList.add('show');
+  }
+}
+
+function renderResult({remision,fecha,filas,advertencias}){
+  tsvOutput.value=filas.map(f=>[remision,fecha,'',f.descripcion,'','',f.out].join('\t')).join('\n');
+  rowCount.textContent=`${filas.length} fila${filas.length!==1?'s':''}`;
+  resultWrap.classList.add('show');
+  if(filas.length>0){
+    let html='<table class="preview"><thead><tr><th># Remisión</th><th>Fecha</th><th>Descripción</th><th>OUT</th></tr></thead><tbody>';
+    filas.forEach(f=>{html+=`<tr><td>${escH(remision)}</td><td>${escH(fecha)}</td><td>${escH(f.descripcion)}</td><td>${f.out}</td></tr>`;});
+    html+='</tbody></table>';
+    tableWrap.innerHTML=html;tableWrap.style.display='block';
+  }
+  if(advertencias?.length){
+    warningsDiv.innerHTML=advertencias.map(w=>`<div class="warn-item">${escH(w)}</div>`).join('');
+    warningsDiv.classList.add('show');
+  }
+}
+
+async function copyTSV(){
+  const btn=document.getElementById('copy-btn');
+  try{await navigator.clipboard.writeText(tsvOutput.value);}
+  catch{tsvOutput.select();document.execCommand('copy');}
+  btn.textContent='✅ ¡Copiado!';btn.classList.add('copied');
+  setTimeout(()=>{btn.textContent='📋 Copiar TSV';btn.classList.remove('copied');},2200);
+}
+
+function resetAll(){
+  currentFile=null;currentBase64=null;fileInput.value='';
+  previewImg.src='';previewWrap.classList.remove('show');
+  dropZone.style.display='';hideAll();tsvOutput.value='';
+}
+
+renderMaster();
+</script>
+</body>
+</html>
