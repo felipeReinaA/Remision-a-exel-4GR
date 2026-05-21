@@ -170,6 +170,9 @@ table.master tbody tr:hover td{background:rgba(47,232,122,.04)}
 </div>
 
 <script>
+const GEMINI_KEY = 'AIzaSyBtEK_ND0S6fWd6nKLCXNEks-Gz0gDOGnY';
+const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' + GEMINI_KEY;
+
 const DEFAULT_PRODUCTOS=[
   {producto:"NUTRION ADULTOS x 500 Grs",prest:"BOLSA X 500 Grs",udm:"0.5Kg",precio:2900},
   {producto:"NUTRION ADULTOS x 1kg",prest:"BOLSA X 1 Kg",udm:"1Kg",precio:5600},
@@ -288,9 +291,9 @@ function switchTab(tab,el){
   if(tab==='maestra')renderMaster();
 }
 
-function buildSystemPrompt(){
+function buildPrompt(){
   const lista=productos.map(p=>`${p.producto} = $${p.precio} (${p.udm})`).join('\n');
-  return`Eres un asistente especializado en extraer datos de remisiones de venta de productos para mascotas (marca Nutrion) y convertirlos a formato TSV para Excel.
+  return`Eres un asistente que extrae datos de remisiones de venta de productos para mascotas (marca Nutrion) y los convierte a JSON.
 
 TABLA DE PRECIOS OFICIAL:
 ${lista}
@@ -303,19 +306,19 @@ REGLAS DE MAPEO (abreviaturas en tickets):
 - "ZEN" → "NUTRION GATOS ZEN"
 - "NU-TROCITOS X 50 GR" → "NU-TROCITOS PERRO SNACK x 50 Grs"
 
-FORMATO DE SALIDA: Responde ÚNICAMENTE con JSON (sin markdown, sin backticks):
-{"remision":"número","fecha":"D-mmm-YY en español (ej: 25-abr-26)","filas":[{"descripcion":"nombre oficial","out":cantidad}],"advertencias":["⚠ No reconocido: X"]}
+Responde SOLO con este JSON (sin markdown, sin backticks, sin texto extra):
+{"remision":"número de remisión o folio","fecha":"D-mmm-YY en español (ej: 16-may-26)","filas":[{"descripcion":"nombre oficial del producto","out":cantidad_entera}],"advertencias":["⚠ No reconocido: X si aplica"]}
 
 REGLAS:
-1. Número de remisión = campo REM, Folio o similar.
-2. Fecha sin hora, mes abreviado en español (ene,feb,mar,abr,may,jun,jul,ago,sep,oct,nov,dic).
-3. CANT del ticket → out (entero).
-4. Valida precio unitario contra tabla para confirmar presentación.
-5. Producto no identificado → advertencias, NO inventar.
-6. Solo JSON, nada más.`;
+1. Número de remisión = campo REM, Folio, No., o similar. Si no aparece usar "S/N".
+2. Fecha sin hora. Mes abreviado en español: ene,feb,mar,abr,may,jun,jul,ago,sep,oct,nov,dic.
+3. CANT del ticket = out (número entero).
+4. Valida precio unitario contra tabla para confirmar presentación exacta.
+5. Producto no identificado → agregarlo en advertencias, NO inventar descripción.
+6. Responde ÚNICAMENTE con el JSON.`;
 }
 
-let currentFile=null,currentBase64=null;
+let currentFile=null,currentBase64=null,currentMime=null;
 const fileInput=document.getElementById('file-input');
 const dropZone=document.getElementById('drop-zone');
 const previewWrap=document.getElementById('preview-wrap');
@@ -341,6 +344,7 @@ dropZone.addEventListener('drop',e=>{
 
 function loadFile(file){
   currentFile=file;
+  currentMime=file.type||'image/jpeg';
   const reader=new FileReader();
   reader.onload=e=>{
     previewImg.src=e.target.result;
@@ -370,22 +374,25 @@ async function processImage(){
   if(!currentBase64)return;
   hideAll();processing.classList.add('show');startProcAnim();
   try{
-    const mt=currentFile.type||'image/jpeg';
-    const resp=await fetch('https://api.anthropic.com/v1/messages',{
-      method:'POST',headers:{'Content-Type':'application/json','anthropic-dangerous-direct-browser-access':'true'},
-      body:JSON.stringify({
-        model:'claude-sonnet-4-20250514',max_tokens:1000,
-        system:buildSystemPrompt(),
-        messages:[{role:'user',content:[
-          {type:'image',source:{type:'base64',media_type:mt,data:currentBase64}},
-          {type:'text',text:'Extrae los datos de esta remisión y devuelve el JSON.'}
-        ]}]
-      })
+    const body={
+      contents:[{parts:[
+        {inline_data:{mime_type:currentMime,data:currentBase64}},
+        {text:buildPrompt()}
+      ]}],
+      generationConfig:{temperature:0.1,maxOutputTokens:1000}
+    };
+    const resp=await fetch(GEMINI_URL,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(body)
     });
     clearInterval(procInterval);processing.classList.remove('show');
-    if(!resp.ok){const e=await resp.json().catch(()=>({}));throw new Error(e.error?.message||`Error HTTP ${resp.status}`);}
+    if(!resp.ok){
+      const e=await resp.json().catch(()=>({}));
+      throw new Error(e.error?.message||`Error HTTP ${resp.status}`);
+    }
     const data=await resp.json();
-    const raw=data.content.map(b=>b.text||'').join('');
+    const raw=data.candidates?.[0]?.content?.parts?.[0]?.text||'';
     const clean=raw.replace(/```json|```/g,'').trim();
     renderResult(JSON.parse(clean));
   }catch(err){
@@ -401,7 +408,7 @@ function renderResult({remision,fecha,filas,advertencias}){
   resultWrap.classList.add('show');
   if(filas.length>0){
     let html='<table class="preview"><thead><tr><th># Remisión</th><th>Fecha</th><th>Descripción</th><th>OUT</th></tr></thead><tbody>';
-    filas.forEach(f=>{html+=`<tr><td>${escH(remision)}</td><td>${escH(fecha)}</td><td>${escH(f.descripcion)}</td><td>${f.out}</td></tr>`;});
+    filas.forEach(f=>{html+=`<tr><td>${escH(String(remision))}</td><td>${escH(fecha)}</td><td>${escH(f.descripcion)}</td><td>${f.out}</td></tr>`;});
     html+='</tbody></table>';
     tableWrap.innerHTML=html;tableWrap.style.display='block';
   }
@@ -420,7 +427,7 @@ async function copyTSV(){
 }
 
 function resetAll(){
-  currentFile=null;currentBase64=null;fileInput.value='';
+  currentFile=null;currentBase64=null;currentMime=null;fileInput.value='';
   previewImg.src='';previewWrap.classList.remove('show');
   dropZone.style.display='';hideAll();tsvOutput.value='';
 }
